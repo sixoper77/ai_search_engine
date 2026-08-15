@@ -1,0 +1,27 @@
+use_default_settings: true
+server:
+  secret_key: "39d2646c2d6547a8b38ab8c01d72f4c2"
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+
+search:
+  safe_search: 0
+  default_lang: ""
+  autocomplete: ""
+  formats:
+    - html
+    - json
+
+ui:
+  static_use_hash: true
+
+enabled_plugins:
+  - 'Hostnames plugin'
+
+hostnames:
+  remove:
+    - '(.*\.)?youtube\.com$'
+    - '(.*\.)?tiktok\.com$'
+    - '(.*\.)?instagram\.com$'
+    - '(.*\.)?vk\.com$'
