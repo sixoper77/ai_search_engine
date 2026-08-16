@@ -1,4 +1,8 @@
+import asyncio
+
 from trafilatura import extract
+
+from .search_client import session
 
 
 def parse_urls(
@@ -13,6 +17,25 @@ def parse_urls(
     return [url["img_src"] for url in response][:photo_results]
 
 
-def parse_html(html) -> str:
-    result = extract(html,output_format="markdown")
+async def parse_html(html) -> str:
+    result = await asyncio.to_thread(extract,html, output_format="markdown")
     return result
+
+
+async def get_text(htmls:list):
+    tasks = []
+    async with asyncio.TaskGroup() as tg:
+        for html in htmls:
+            taskk = tg.create_task(parse_html(html))
+            tasks.append(taskk)
+    results = [task.result() for task in tasks]
+    return results
+
+async def search_html(urls: list):
+    tasks = []
+    async with asyncio.TaskGroup() as tg:
+        for url in urls:
+            taskk = tg.create_task(session.search(url))
+            tasks.append(taskk)
+    results = [task.result() for task in tasks]
+    return results

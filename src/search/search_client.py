@@ -10,10 +10,13 @@ class Session:
             self.session = AsyncSession(impersonate="chrome")
         return self.session
 
-    async def search(self, url, params) -> dict:
+    async def search(self, url: str, params: dict | None = None) -> dict:
         session = await self.get_session()
-        resp = await session.get(url=url, params=params)
-        return resp.json()
+        if params:
+            resp = await session.get(url=url, params=params)
+            return resp.json()
+        resp = await session.get(url=url)
+        return resp.text
 
     async def close_conn(self):
         if self.session and not self.session.closed:
