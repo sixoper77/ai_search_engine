@@ -25,3 +25,5 @@ hostnames:
     - '(.*\.)?tiktok\.com$'
     - '(.*\.)?instagram\.com$'
     - '(.*\.)?vk\.com$'
+    - '.*\.ru$'  
+    - '.*\.рф$'

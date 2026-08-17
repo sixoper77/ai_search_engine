@@ -13,29 +13,35 @@ def parse_urls(
 ) -> list[str]:
     res_from_resp = response["results"]
     if not photos:
-        return [url["url"] for url in res_from_resp][:url_results]
-    return [url["img_src"] for url in response][:photo_results]
+        return list(dict.fromkeys(url["url"] for url in res_from_resp))[:url_results]
+    return list(dict.fromkeys(url["img_src"] for url in response))[:photo_results]
 
 
 async def parse_html(html) -> str:
-    result = await asyncio.to_thread(extract,html, output_format="markdown")
+    result = await asyncio.to_thread(extract, html, output_format="markdown")
     return result
 
 
-async def get_text(htmls:list):
+async def get_text(htmls: list) -> list:
     tasks = []
     async with asyncio.TaskGroup() as tg:
         for html in htmls:
             taskk = tg.create_task(parse_html(html))
             tasks.append(taskk)
-    results = [task.result() for task in tasks]
-    return results
+    results = [
+        " ".join(task.result().split(" "))[:1500]
+        for task in tasks
+        if task is not None and task.result() is not None
+    ]
 
-async def search_html(urls: list):
+    return list(dict.fromkeys(results))
+
+
+async def search_html(urls: list) -> list:
     tasks = []
     async with asyncio.TaskGroup() as tg:
         for url in urls:
             taskk = tg.create_task(session.search(url))
             tasks.append(taskk)
     results = [task.result() for task in tasks]
-    return results
+    return list(dict.fromkeys(results))
