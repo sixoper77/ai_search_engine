@@ -9,6 +9,7 @@ dependencies = [
     "curl-cffi>=0.16.0",
     "fastapi>=0.141.1",
     "instructor>=1.15.4",
+    "litellm>=1.97.0",
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0.51",
     "trafilatura>=2.2.0",
