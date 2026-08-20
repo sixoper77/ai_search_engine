@@ -4,16 +4,26 @@ from trafilatura import extract
 
 
 class Parser:
+    @classmethod
+    async def parse(cls, links_response: dict[str], photos_response: dict[str]):
+        async with asyncio.TaskGroup() as tg:
+            links = tg.create_task(
+                asyncio.to_thread(cls.parse_links, links_response))
+            photos = tg.create_task(
+                asyncio.to_thread(cls.parse_photos, photos_response)
+            )
+        return links.result(), photos.result()
+
     @staticmethod
-    def parse_photos(response: dict, photo_results: int = 4) -> list:
+    def parse_photos(response: list[dict], photo_results: int = 4) -> list:
         print(response)
-        results = response[0]["results"]
+        results = response["results"]
         return list(dict.fromkeys(url["img_src"] for url in results))[:photo_results]
 
     @staticmethod
     def parse_links(response: list[dict], url_results: int = 7):
         print(response)
-        results = response[0]["results"]
+        results = response["results"]
         return list(dict.fromkeys(url["url"] for url in results))[:url_results]
 
     @staticmethod

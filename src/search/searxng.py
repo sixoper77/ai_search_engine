@@ -10,17 +10,11 @@ class SearxngSearch(BaseSearch):
     searxng_url = settings.searxng_url
 
     @classmethod
-    async def search(cls, query: str, photo_query: str, language: str):
-        tasks_photo = []
-        tasks_url = []
+    async def search(cls, query: str, photo_query: str, language: str) -> dict:
         async with asyncio.TaskGroup() as tg:
-            task = tg.create_task(cls.search_urls(query, language))
-            tasks_url.append(task)
-            task2 = tg.create_task(cls.search_photo(photo_query, language))
-            tasks_photo.append(task2)
-        photo_urls = [photo.result() for photo in tasks_photo]
-        urls = [url.result() for url in tasks_url]
-        return urls, photo_urls
+            task_url = tg.create_task(cls.search_urls(query, language))
+            task_photo = tg.create_task(cls.search_photo(photo_query, language))
+        return task_url.result(),task_photo.result() 
 
     @classmethod
     async def search_urls(cls, query: str, language: str) -> dict:
