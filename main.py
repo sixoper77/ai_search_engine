@@ -3,6 +3,7 @@ import asyncio
 from fastapi import FastAPI
 
 from src.llm.base import llm
+from src.matcher.match import match_results
 from src.search.searxng import SearxngSearch
 from src.search.utils import get_text, parse_urls, search_html
 
@@ -20,3 +21,6 @@ async def send_request(q: str):
     sites = await search_html(result)
     text = await get_text(sites)
     print(text)
+    match_result = await asyncio.to_thread(match_results, q, text)
+    stream_response = await llm.astream(q, match_result)
+    print(stream_response)

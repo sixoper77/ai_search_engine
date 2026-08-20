@@ -29,7 +29,7 @@ async def get_text(htmls: list) -> list:
             taskk = tg.create_task(parse_html(html))
             tasks.append(taskk)
     results = [
-        " ".join(task.result().split(" "))[:1500]
+        " ".join(task.result().split(" "))[:3200]
         for task in tasks
         if task is not None and task.result() is not None
     ]

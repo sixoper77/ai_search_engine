@@ -12,11 +12,14 @@ class Session:
 
     async def search(self, url: str, params: dict | None = None) -> dict:
         session = await self.get_session()
-        if params:
-            resp = await session.get(url=url, params=params)
-            return resp.json()
-        resp = await session.get(url=url)
-        return resp.text
+        try:
+            if params:
+                resp = await session.get(url=url, params=params)
+                return resp.json()
+            resp = await session.get(url=url)
+            return resp.text
+        except Exception as e:
+            print(e)
 
     async def close_conn(self):
         if self.session and not self.session.closed:

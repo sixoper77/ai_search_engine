@@ -41,8 +41,10 @@ class EveryLLM(BaseLLM):
         )
         return response
 
-    async def astream(self, q: str):
-        response = await self.client.completions.create(
+    async def astream(self, q: str, data: list):
+        data_for_ai = "\n---\n".join(data)
+        combined_prompt = f"\n Data:\n{data_for_ai}\nUser Question:\n{q}"
+        response = await acompletion(
             model=self.model,
             messages=[
                 {
@@ -51,13 +53,16 @@ class EveryLLM(BaseLLM):
                 },
                 {
                     "role": "user",
-                    "content": q,
+                    "content": combined_prompt,
                 },
             ],
             stream=True,
         )
+
         async for chunk in response:
-            yield chunk.choices[0].delta.content or ""
+            token = chunk.choices[0].delta.content
+            if token is not None:
+                print(token, end="", flush=True)
 
 
 llm = EveryLLM(model)
