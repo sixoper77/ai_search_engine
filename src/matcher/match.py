@@ -39,10 +39,4 @@ def match_results(query: str, corpus: list):
     text_results = list(dict.fromkeys([res["text"] for res in results[:3]]))
     print(len(text_results))
     return text_results
-    # print(f"\nQuery: {query}")
-    # print("-" * 50)
-    # for rank, res in enumerate(results, 1):
-    #     print(
-    #         f"[{rank}] Cross-Encoder: {res['cross_score']:.4f} | Bi-Encoder: {res['bi_score']:.4f}"
-    #     )
-    #     print(f"Text: {res['text']}...\n")
+   
