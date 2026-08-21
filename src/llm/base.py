@@ -10,13 +10,14 @@ from .schemas import QueriesSchema
 
 load_dotenv()
 
-_, model = settings.get_model_and_key()
-print(model)
+model_url, model = settings.get_model_and_key()
+print(model_url, model)
 
 
 class EveryLLM(BaseLLM):
-    def __init__(self, model: str):
+    def __init__(self, model: str, api_base: str | None = None):
         self.model = model
+        self.api_base = api_base
         if "ollama" in model or "groq" in model:
             mode = instructor.Mode.MD_JSON
         else:
@@ -27,6 +28,7 @@ class EveryLLM(BaseLLM):
     async def get_query(self, q: str) -> QueriesSchema:
         response = await self.client.completions.create(
             model=self.model,
+            api_base=self.api_base,
             messages=[
                 {
                     "role": "system",
@@ -46,6 +48,7 @@ class EveryLLM(BaseLLM):
         combined_prompt = f"\n Data:\n{data_for_ai}\nUser Question:\n{q}"
         response = await acompletion(
             model=self.model,
+            api_base=self.api_base,
             messages=[
                 {
                     "role": "system",
@@ -65,4 +68,4 @@ class EveryLLM(BaseLLM):
                 print(token, end="", flush=True)
 
 
-llm = EveryLLM(model)
+llm = EveryLLM(model, model_url)

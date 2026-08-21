@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-
 class Settings:
     tavily_api_key = os.getenv("TAVILY_API_KEY")
     serper_api_key = os.getenv("SERPER_API_KEY")
@@ -20,6 +19,7 @@ class Settings:
     gemeni_api_key = os.getenv("GEMINI_API_KEY")
     gemeni_model = os.getenv("GEMENI_MODEL")
 
+    llama_model = os.getenv("LLAMA_MODEL")
     llama_url = os.getenv("LLAMA_URL")
 
     @classmethod
@@ -39,10 +39,12 @@ class Settings:
     @classmethod
     def get_model_and_key(cls):
         if cls.openai_api_key and cls.openai_model:
-            return (cls.openai_api_key, cls.openai_model)
+            return (None,cls.openai_model)
         if cls.gemeni_api_key and cls.gemeni_model:
-            return (cls.gemeni_api_key, cls.gemeni_model)
-        return (None,cls.llama_url)
+            return  (None,cls.gemeni_model)
+        if cls.llama_model and cls.llama_url:
+            return (cls.llama_url, cls.llama_model)
+        return (None, None)
 
 
 settings = Settings()
