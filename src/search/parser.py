@@ -16,14 +16,16 @@ class Parser:
 
     @staticmethod
     def parse_photos(response: list[dict], photo_results: int = 4) -> list:
-        print(response)
+        if response is None:
+            return []
         results = response["results"]
         return list(dict.fromkeys(url["img_src"] for url in results))[:photo_results]
 
     @staticmethod
     def parse_links(response: list[dict], url_results: int = 7):
-        print(response)
-        results = response["results"]
+        if response is None:
+            return []
+        results = response[0]["results"]
         return list(dict.fromkeys(url["url"] for url in results))[:url_results]
 
     @staticmethod
