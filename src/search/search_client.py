@@ -7,7 +7,7 @@ class Session:
 
     async def get_session(self) -> AsyncSession:
         if self.session is None or self.session._closed:
-            self.session = AsyncSession(impersonate="chrome")
+            self.session = AsyncSession(impersonate="chrome",timeout=3)
         return self.session
 
     async def search(self, url: str, params: dict | None = None) -> dict:

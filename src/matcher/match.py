@@ -14,6 +14,8 @@ reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
 
 
 def match_results(query: str, corpus: list):
+    if len(corpus)==0:
+        raise ValueError("The text corpus is empty.")
     formatted_query = f"query: {query}"
     formatted_corpus = [f"passage: {doc}" for doc in corpus]
 
@@ -37,6 +39,6 @@ def match_results(query: str, corpus: list):
         )
     results = sorted(results, key=lambda x: x["cross_score"], reverse=True)
     text_results = list(dict.fromkeys([res["text"] for res in results[:3]]))
+    print(text_results)
     print(len(text_results))
     return text_results
-   

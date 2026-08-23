@@ -10,13 +10,14 @@ async def get_text(htmls: list) -> list:
         for html in htmls:
             taskk = tg.create_task(Parser.parse_html(html))
             tasks.append(taskk)
-    results = [
-        " ".join(task.result().split(" "))[:3200]
-        for task in tasks
-        if task is not None and task.result() is not None
-    ]
+    all_chunks = []
+    for task in tasks:
+        text = task.result()
+        if text:
+            chunk_text = batch_text(text)
+            all_chunks.extend(chunk_text)
 
-    return list(dict.fromkeys(results))
+    return list(dict.fromkeys(all_chunks))
 
 
 async def search_html(urls: list) -> list:
@@ -27,3 +28,29 @@ async def search_html(urls: list) -> list:
             tasks.append(taskk)
     results = [task.result() for task in tasks]
     return list(dict.fromkeys(results))
+
+
+def batch_text(text: str, batch_size: int = 1200, overlap: int = 200):
+    text = " ".join(text.split())
+    chunks = []
+    start = 0
+    text_len = len(text)
+
+    while start < text_len:
+        end = min(start + batch_size, text_len)
+        if end < text_len:
+            boundary = text.rfind(" ", start, end)
+            if boundary != -1 and boundary > start + (batch_size // 2):
+                end = boundary
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+        if end == text_len:
+            break
+        next_start_raw = end - overlap
+        next_start_boundary = text.find(" ", next_start_raw, end)
+        if next_start_boundary != -1:
+            start = next_start_boundary + 1
+        else:
+            start = next_start_raw
+    return chunks
