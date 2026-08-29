@@ -6,7 +6,7 @@ from config import settings
 
 from .absllm import BaseLLM
 from .enums import Prompts
-from .schemas import QueriesSchema
+from .schemas import AskSchema
 
 load_dotenv()
 
@@ -25,7 +25,7 @@ class EveryLLM(BaseLLM):
 
         self.client = instructor.from_litellm(acompletion, mode=mode)
 
-    async def get_query(self, q: str) -> QueriesSchema:
+    async def get_query[T: AskSchema](self, q: str, schema: type[T]) -> T:
         response = await self.client.completions.create(
             model=self.model,
             api_base=self.api_base,
@@ -39,7 +39,7 @@ class EveryLLM(BaseLLM):
                     "content": q,
                 },
             ],
-            response_model=QueriesSchema,
+            response_model=schema,
         )
         return response
 

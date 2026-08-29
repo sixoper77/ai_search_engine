@@ -30,12 +30,12 @@ async def search_html(urls: list) -> list:
     return list(dict.fromkeys(results))
 
 
-def batch_text(text: str, batch_size: int = 1200, overlap: int = 200):
+def batch_text(text: str, batch_size: int = 2000, overlap: int = 300):
     text = " ".join(text.split())
     chunks = []
     start = 0
     text_len = len(text)
-
+    
     while start < text_len:
         end = min(start + batch_size, text_len)
         if end < text_len:

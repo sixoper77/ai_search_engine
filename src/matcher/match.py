@@ -11,11 +11,13 @@ from sentence_transformers.util import cos_sim
 
 embedder = SentenceTransformer("intfloat/multilingual-e5-small")
 reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
+BI_ENCODER_TOP_K = 30
 
 
 def match_results(query: str, corpus: list):
-    if len(corpus)==0:
+    if len(corpus) == 0:
         raise ValueError("The text corpus is empty.")
+    corpus = list(dict.fromkeys(corpus))
     formatted_query = f"query: {query}"
     formatted_corpus = [f"passage: {doc}" for doc in corpus]
 
@@ -23,7 +25,7 @@ def match_results(query: str, corpus: list):
     corpus_embeddings = embedder.encode(formatted_corpus, convert_to_tensor=True)
 
     similarity_scores = cos_sim(query_embedding, corpus_embeddings)[0]
-    top_k = min(5, len(corpus))
+    top_k = min(BI_ENCODER_TOP_K, len(corpus))
     bi_scores, indieces = torch.topk(similarity_scores, top_k)
 
     cross_inp = [[query, corpus[idx]] for idx in indieces]
@@ -38,7 +40,7 @@ def match_results(query: str, corpus: list):
             }
         )
     results = sorted(results, key=lambda x: x["cross_score"], reverse=True)
-    text_results = list(dict.fromkeys([res["text"] for res in results[:3]]))
+    text_results = [res["text"] for res in results[:12]]
     print(text_results)
     print(len(text_results))
     return text_results
