@@ -35,7 +35,7 @@ def batch_text(text: str, batch_size: int = 2000, overlap: int = 300):
     chunks = []
     start = 0
     text_len = len(text)
-    
+
     while start < text_len:
         end = min(start + batch_size, text_len)
         if end < text_len:
@@ -54,3 +54,18 @@ def batch_text(text: str, batch_size: int = 2000, overlap: int = 300):
         else:
             start = next_start_raw
     return chunks
+
+
+async def batch_text_from_list(texts: list):
+    bat_text = []
+    tasks = []
+
+    async with asyncio.TaskGroup() as tg:
+        for t in texts:
+            if t:
+                task = tg.create_task(asyncio.to_thread(batch_text, t))
+                tasks.append(task)
+
+    for task in tasks:
+        bat_text.extend(task.result())
+    return bat_text

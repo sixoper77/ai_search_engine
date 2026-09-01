@@ -7,14 +7,22 @@ class Session:
 
     async def get_session(self) -> AsyncSession:
         if self.session is None or self.session._closed:
-            self.session = AsyncSession(impersonate="chrome",timeout=3)
+            self.session = AsyncSession(impersonate="chrome", timeout=3)
         return self.session
 
-    async def search(self, url: str, params: dict | None = None) -> dict:
+    async def search(
+        self,
+        url: str,
+        params: dict | None = None,
+        heasders: dict | None = None,
+        payload: dict | None = None,
+    ) -> dict:
         session = await self.get_session()
         try:
-            if params:
-                resp = await session.get(url=url, params=params)
+            if payload:
+                resp = await session.post(
+                    url=url, params=params, headers=heasders, json=payload
+                )
                 return resp.json()
             resp = await session.get(url=url)
             return resp.text
