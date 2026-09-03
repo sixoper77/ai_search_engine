@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .enums import Prompts
 
@@ -10,6 +12,10 @@ SerperTypes = Literal["search", "reviews", "news", "shopping", "scholar", "paten
 
 
 class AskSchema(BaseModel):
+    pass
+
+
+class ResponseSchema(BaseModel):
     pass
 
 
@@ -41,7 +47,7 @@ class SerperResponse(BaseModel):
     snippet: str
 
 
-class SerperResponseList(BaseModel):
+class SerperGeneralResponse(ResponseSchema):
     organic: list[SerperResponse] = Field(default_factory=list)
 
 
@@ -49,7 +55,7 @@ class SerperPhotos(BaseModel):
     image_url: str = Field(alias="imageUrl")
 
 
-class SerperPhotosList(BaseModel):
+class SerperPhotosResult(ResponseSchema):
     images: list[SerperPhotos] = Field(default_factory=list, max_length=4)
 
     @field_validator("images", mode="before")
@@ -57,4 +63,40 @@ class SerperPhotosList(BaseModel):
     def cut_list(cls, v: list) -> list:
         if isinstance(v, list):
             return v[:4]
-        
+
+
+class ParseData(BaseModel):
+    links: Annotated[list[str], Field(default_factory=list)]
+    photos: Annotated[list[str], Field(default_factory=list)]
+
+
+class SearxngResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    url: str
+
+
+class SearxngGeneralResponse(ResponseSchema):
+    model_config = ConfigDict(extra="allow")
+    results: Annotated[list[SearxngResult], Field(default_factory=list)]
+
+
+class SearxngPhotoResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    img_src: str
+
+
+class SearxngImageResponse(ResponseSchema):
+    model_config = ConfigDict(extra="allow")
+    results: Annotated[list[SearxngPhotoResult], Field(default_factory=list)]
+
+
+class TavilyResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    content: str
+
+
+class TavilyGeneralResponse(ResponseSchema):
+    model_config = ConfigDict(extra="allow")
+    query: str
+    images: list[str]
+    results: list[TavilyResponse]

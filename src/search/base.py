@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 
+from src.search.schemas import SearchSchema
 
-class BaseSearch(ABC):
+
+class BaseSearch[T_SearchData: SearchSchema, T_ResponseData](ABC):
     @abstractmethod
-    def search():
+    async def search(self, data: T_SearchData) -> T_ResponseData:
         pass

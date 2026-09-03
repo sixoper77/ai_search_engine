@@ -1,12 +1,16 @@
 from tavily import AsyncTavilyClient
 
 from config import settings
+from src.llm.schemas import TavilyGeneralResponse
 from src.search.base import BaseSearch
+from src.search.schemas import SearchSchema
 
 TAVILY_API_KEY = settings.tavily_api_key
+if TAVILY_API_KEY is None:
+    raise ValueError("TAVILY API KEY not found")
 
 
-class TavilySearch(BaseSearch):
+class TavilySearch(BaseSearch[SearchSchema, TavilyGeneralResponse]):
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.client: AsyncTavilyClient | None = None
@@ -21,7 +25,9 @@ class TavilySearch(BaseSearch):
         if session:
             session.close()
 
-    async def search(self, query: str, topic: str, max_results: int = 7):
+    # query: str, topic: str, max_results: int = 7
+    async def search(self, data: SearchSchema) -> TavilyGeneralResponse:
+        query, max_results, topic = data.query, data.max_results, data.topic
         tavily_client = self.get_session()
         response = await tavily_client.search(
             query,
@@ -30,10 +36,7 @@ class TavilySearch(BaseSearch):
             search_depth="advanced",
             topic=topic,
         )
-        all_images = response["images"][:4]
-        results = response["results"]
-        all_content = [result["content"] for result in results]
-        return all_content, all_images
+        return TavilyGeneralResponse(**response)
 
 
 tavily_client = TavilySearch(TAVILY_API_KEY)

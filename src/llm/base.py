@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 import instructor
 from dotenv import load_dotenv
 from litellm import acompletion
@@ -26,7 +28,7 @@ class EveryLLM(BaseLLM):
         self.client = instructor.from_litellm(acompletion, mode=mode)
 
     async def get_query[T: AskSchema](self, q: str, schema: type[T]) -> T:
-        response = await self.client.completions.create(
+        response = await self.client.completions.create(  # type: ignore
             model=self.model,
             api_base=self.api_base,
             messages=[
@@ -43,7 +45,7 @@ class EveryLLM(BaseLLM):
         )
         return response
 
-    async def astream(self, q: str, data: list):
+    async def astream(self, q: str, data: list) -> AsyncGenerator[str, None]: 
         data_for_ai = "\n---\n".join(data)
         combined_prompt = f"\n Data:\n{data_for_ai}\nUser Question:\n{q}"
         response = await acompletion(
@@ -65,7 +67,8 @@ class EveryLLM(BaseLLM):
         async for chunk in response:
             token = chunk.choices[0].delta.content
             if token is not None:
-                print(token, end="", flush=True)
+                yield token
+                
 
 
 llm = EveryLLM(model, model_url)
