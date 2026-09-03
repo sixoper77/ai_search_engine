@@ -7,6 +7,7 @@ requires-python = ">=3.12.5"
 dependencies = [
     "aiohttp>=3.14.3",
     "curl-cffi>=0.16.0",
+    "datamodel-code-generator>=0.76.1",
     "fastapi>=0.141.1",
     "instructor>=1.15.4",
     "litellm>=1.97.0",
