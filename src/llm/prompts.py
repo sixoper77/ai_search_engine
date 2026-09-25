@@ -10,7 +10,7 @@ QUERY_URL = """List of search queries.
 
 QUERY_PHOTO = """Optimal query for search photos for user question"""
 
-ANSWER = """You must give a clear and constructive answer to the user based on the information given to you, based on this given information, which completely covers the user's question."""
+ANSWER = """You must give a clear and constructive answer to the user based on the information given to you, based on this given information, which completely covers the user's question.In the end of your answer,add urls which I sent you"""
 
 LANG_LOCALES = """Determine the language of the user query and return the exact locale code from the list. If the language is not recognized, return 'en-US'."""
 

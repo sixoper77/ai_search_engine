@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from litellm import acompletion
 
 from config import settings
+from src.search.schemas import Source
 
 from .absllm import BaseLLM
 from .enums import Prompts
@@ -45,8 +46,11 @@ class EveryLLM(BaseLLM):
         )
         return response
 
-    async def astream(self, q: str, data: list) -> AsyncGenerator[str, None]: 
-        data_for_ai = "\n---\n".join(data)
+    async def astream(self, q: str, data: list[Source]) -> AsyncGenerator[str, None]:
+        text = "\n---\n".join(t.text for t in data)
+        urls = "\n---\n".join(u.url for u in data)
+        print(urls)
+        data_for_ai = text + urls
         combined_prompt = f"\n Data:\n{data_for_ai}\nUser Question:\n{q}"
         response = await acompletion(
             model=self.model,
@@ -68,7 +72,6 @@ class EveryLLM(BaseLLM):
             token = chunk.choices[0].delta.content
             if token is not None:
                 yield token
-                
 
 
 llm = EveryLLM(model, model_url)
