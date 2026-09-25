@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -16,7 +16,7 @@ class AskSchema(BaseModel):
 
 
 class ResponseSchema(BaseModel):
-    pass
+    results: list[Any]
 
 
 class QueriesSchema(AskSchema):
@@ -43,26 +43,25 @@ class SerperSchema(QueriesSchema):
 
 class SerperResponse(BaseModel):
     title: str
-    link: str
+    url: Annotated[str, Field(alias="link")]
     snippet: str
 
 
 class SerperGeneralResponse(ResponseSchema):
-    organic: list[SerperResponse] = Field(default_factory=list)
+    results: list[SerperResponse] = Field(default_factory=list, alias="organic")
 
 
 class SerperPhotos(BaseModel):
-    image_url: str = Field(alias="imageUrl")
+    img_src: str = Field(alias="imageUrl")
 
 
 class SerperPhotosResult(ResponseSchema):
-    images: list[SerperPhotos] = Field(default_factory=list, max_length=4)
+    results: list[SerperPhotos] = Field(default_factory=list, max_length=4)
 
-    @field_validator("images", mode="before")
+    @field_validator("results", mode="before")
     @classmethod
-    def cut_list(cls, v: list) -> list:
-        if isinstance(v, list):
-            return v[:4]
+    def cut_list(cls, v: Any) -> Any:
+        return v[:4] if isinstance(v, list) else v
 
 
 class ParseData(BaseModel):
@@ -89,10 +88,25 @@ class SearxngImageResponse(ResponseSchema):
     model_config = ConfigDict(extra="allow")
     results: Annotated[list[SearxngPhotoResult], Field(default_factory=list)]
 
+    @field_validator("results", mode="before")
+    @classmethod
+    def clean_results(cls, v: Any) -> Any:
+        if not isinstance(v, list):
+            return v
+        seen: set[str] = set()
+        out = []
+        for r in v:
+            src = r.get("img_src") if isinstance(r, dict) else None
+            if src and src not in seen and not src.lower().endswith(".heic"):
+                seen.add(src)
+                out.append(r)
+        return out
+
 
 class TavilyResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
     content: str
+    url: str
 
 
 class TavilyGeneralResponse(ResponseSchema):

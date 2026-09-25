@@ -51,7 +51,7 @@ class SerperCLient(
             "gl": county,
             "hl": language,
         }
-        response = await session.search(url, payload=payload, heasders=self.headers)
+        response = await session.post_json(url, headers=self.headers, payload=payload)
         return SerperGeneralResponse(**response)
 
     async def search_photos(
@@ -63,7 +63,7 @@ class SerperCLient(
             "gl": county,
             "hl": language,
         }
-        response = await session.search(url, payload=payload, heasders=self.headers)
+        response = await session.post_json(url, headers=self.headers, payload=payload)
         return SerperPhotosResult(**response)
 
 
