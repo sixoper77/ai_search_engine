@@ -5,6 +5,10 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class BaseEvent(BaseModel):
+    pass
+
+
 class SearchSchema(BaseModel):
     model_config = ConfigDict(extra="allow")
     query: str | None = None
@@ -27,10 +31,6 @@ class SearxngSearchSchema(SearchSchema):
 
 
 class TavilySearchSchema(SearchSchema):
-    pass
-
-
-class BaseEvent(BaseModel):
     pass
 
 
@@ -86,6 +86,16 @@ class Fact(BaseModel):
     step: int
 
 
+class SitesInfo(BaseModel):
+    url: str
+    title: str
+
+
+class SitesInfoEvent(BaseEvent):
+    type: str = "sites_info"
+    sources: list[SitesInfo]
+
+
 class AgentState(BaseModel):
     question: str
     step_count: int | None
@@ -105,3 +115,4 @@ class Source(BaseModel):
     model_config = ConfigDict(frozen=True)
     text: str
     url: str
+    title: str

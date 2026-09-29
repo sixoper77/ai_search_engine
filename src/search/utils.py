@@ -21,15 +21,17 @@ from .schemas import (
 from .search_client import session
 
 
-async def get_text(htmls: list[tuple[str, str]]) -> list[Source]:
-    async def process(hmtl: str, url: str):
+async def get_text(htmls: list[tuple[str, str, str]]) -> list[Source]:
+    async def process(hmtl: str, url: str, title: str):
         text = await Parser.parse_html(hmtl)
         if not text:
             return []
-        return [Source(text=c, url=url) for c in batch_text(text)]
+        return [Source(text=c, url=url, title=title) for c in batch_text(text)]
 
     async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(process(html, url)) for html, url in htmls]
+        tasks = [
+            tg.create_task(process(html, url, title)) for html, url, title in htmls
+        ]
     all_chunks: list[Source] = []
     for task in tasks:
         all_chunks.extend(task.result())
@@ -39,17 +41,17 @@ async def get_text(htmls: list[tuple[str, str]]) -> list[Source]:
     return list(seen.values())
 
 
-async def search_html(urls: list) -> list[tuple[str, str]]:
-    async def process(url: str) -> tuple[str, str] | None:
+async def search_html(urls: list[tuple[str, str]]) -> list[tuple[str, str, str]]:
+    async def process(url: str, title: str) -> tuple[str, str, str] | None:
         try:
             html = await session.fetch_html(url)
         except Exception as e:
             print(f"skip {url}: {e}")
             return None
-        return html, url
+        return html, url, title
 
     async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(process(url)) for url in urls]
+        tasks = [tg.create_task(process(url, title)) for url, title in urls]
     return [r for t in tasks if (r := t.result()) is not None]
 
 
@@ -79,16 +81,16 @@ def batch_text(text: str, batch_size: int = 2000, overlap: int = 300) -> list[st
     return chunks
 
 
-async def batch_text_from_list(texts: Iterator[tuple[str, str]]) -> list[Source]:
-    def process(text: str, url: str):
-        return [Source(text=chunk, url=url) for chunk in batch_text(text)]
+async def batch_text_from_list(texts: Iterator[tuple[str, str, str]]) -> list[Source]:
+    def process(text: str, url: str, title: str):
+        return [Source(text=chunk, url=url, title=title) for chunk in batch_text(text)]
 
     bat_text = []
 
     async with asyncio.TaskGroup() as tg:
         tasks = [
-            tg.create_task(asyncio.to_thread(process, text, url))
-            for url, text in texts
+            tg.create_task(asyncio.to_thread(process, text, url, title))
+            for url, text, title in texts
             if text
         ]
 
@@ -135,13 +137,20 @@ async def process_links(
 async def process_tavily(
     data: Sequence[ResponseSchema], photos_results: ResponseSchema
 ) -> list[Source]:
-    async def process(url: str, content: str):
-        return [Source(text=text, url=url) for text in batch_text(content)]
+    async def process(
+        url: str,
+        content: str,
+        title: str,
+    ):
+        return [Source(text=text, url=url, title=title) for text in batch_text(content)]
 
     parsed_data: list[TavilyResponse] = [item for page in data for item in page.results]
     results = Parser.parse_tavily(parsed_data)
     async with asyncio.TaskGroup() as tg:
-        tasks = [tg.create_task(process(url, content)) for url, content in results]
+        tasks = [
+            tg.create_task(process(url, content, title))
+            for url, content, title in results
+        ]
     all_chunks: list[Source] = []
     for task in tasks:
         all_chunks.extend(task.result())

@@ -38,12 +38,16 @@ def match_results(query: str, corpus: list[Source]) -> list[Source]:
             {
                 "text": corpus[idx].text,
                 "url": corpus[idx].url,
+                "title": corpus[idx].title,
                 "bi_score": bi_score.item(),
                 "cross_score": cross_score.item(),
             }
         )
     results = sorted(results, key=lambda x: x["cross_score"], reverse=True)
-    text_results = [Source(text=res["text"], url=res["url"]) for res in results[:12]]
+    text_results = [
+        Source(text=res["text"], url=res["url"], title=res["title"])
+        for res in results[:12]
+    ]
     print(text_results)
     print(len(text_results))
     return text_results

@@ -32,13 +32,15 @@ class Parser:
     @staticmethod
     def parse_links(
         responses: Sequence[ResponseSchema], url_results: int = 7
-    ) -> list[str]:
-        all_urls = (res.url for response in responses for res in response.results)
+    ) -> list[tuple[str, str]]:
+        all_urls = (
+            (res.url, res.title) for response in responses for res in response.results
+        )
         return list(dict.fromkeys(all_urls))[:url_results]
 
     @staticmethod
-    def parse_tavily(response: list[TavilyResponse]) -> Iterator[tuple[str, str]]:
-        return ((res.url, res.content) for res in response)
+    def parse_tavily(response: list[TavilyResponse]) -> Iterator[tuple[str, str, str]]:
+        return ((res.url, res.content, res.title) for res in response)
 
     @staticmethod
     async def parse_html(html: str) -> str | None:

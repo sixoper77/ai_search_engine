@@ -65,13 +65,14 @@ class SerperPhotosResult(ResponseSchema):
 
 
 class ParseData(BaseModel):
-    links: Annotated[list[str], Field(default_factory=list)]
+    links: Annotated[list[tuple[str, str]], Field(default_factory=list)]
     photos: Annotated[list[str], Field(default_factory=list)]
 
 
 class SearxngResult(BaseModel):
     model_config = ConfigDict(extra="allow")
     url: str
+    title: str
 
 
 class SearxngGeneralResponse(ResponseSchema):
@@ -107,6 +108,7 @@ class TavilyResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
     content: str
     url: str
+    title: str
 
 
 class TavilyGeneralResponse(ResponseSchema):

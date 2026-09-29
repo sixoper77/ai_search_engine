@@ -47,11 +47,10 @@ class EveryLLM(BaseLLM):
         return response
 
     async def astream(self, q: str, data: list[Source]) -> AsyncGenerator[str, None]:
-        text = "\n---\n".join(t.text for t in data)
-        urls = "\n---\n".join(u.url for u in data)
-        print(urls)
-        data_for_ai = text + urls
-        combined_prompt = f"\n Data:\n{data_for_ai}\nUser Question:\n{q}"
+        text = " ".join(t.text for t in data)
+        sources = "\n".join(f"{s.url} - {s.title}" for s in data)
+        print(sources)
+        combined_prompt = f"Data:\n{text}\n\nSources:\n{sources}\n\nUser Question:\n{q}"
         response = await acompletion(
             model=self.model,
             api_base=self.api_base,
