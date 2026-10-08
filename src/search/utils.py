@@ -100,7 +100,7 @@ async def batch_text_from_list(texts: Iterator[tuple[str, str, str]]) -> list[So
 
 
 def emit(event: BaseEvent) -> str:
-    return event.model_dump_json() + "\n"
+    return f"data: {event.model_dump_json()}\n\n"
 
 
 def build_searxng_schema(q: str, schema: QueriesSchema) -> SearchSchema:

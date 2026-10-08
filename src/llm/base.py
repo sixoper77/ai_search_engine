@@ -1,11 +1,11 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 
 import instructor
 from dotenv import load_dotenv
 from litellm import acompletion
 
 from config import settings
-from src.search.schemas import Source
+from src.search.schemas import BaseSource
 
 from .absllm import BaseLLM
 from .enums import Prompts
@@ -28,14 +28,16 @@ class EveryLLM(BaseLLM):
 
         self.client = instructor.from_litellm(acompletion, mode=mode)
 
-    async def get_query[T: AskSchema](self, q: str, schema: type[T]) -> T:
+    async def get_query[T: AskSchema](
+        self, q: str, prompt: Prompts = Prompts.PROMPT_QUERY, *, schema: type[T]
+    ) -> T:
         response = await self.client.completions.create(  # type: ignore
             model=self.model,
             api_base=self.api_base,
             messages=[
                 {
                     "role": "system",
-                    "content": Prompts.PROMPT_QUERY,
+                    "content": prompt,
                 },
                 {
                     "role": "user",
@@ -46,9 +48,11 @@ class EveryLLM(BaseLLM):
         )
         return response
 
-    async def astream(self, q: str, data: list[Source]) -> AsyncGenerator[str, None]:
+    async def astream(
+        self, q: str, data: Sequence[BaseSource]
+    ) -> AsyncGenerator[str, None]:
         text = " ".join(t.text for t in data)
-        sources = "\n".join(f"{s.url} - {s.title}" for s in data)
+        sources = "\n".join(f"{s.url} - {s.text}" for s in data)
         print(sources)
         combined_prompt = f"Data:\n{text}\n\nSources:\n{sources}\n\nUser Question:\n{q}"
         response = await acompletion(

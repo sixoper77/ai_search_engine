@@ -4,6 +4,9 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.llm.enums import Prompts
+from src.llm.schemas import AskSchema
+
 
 class BaseEvent(BaseModel):
     pass
@@ -49,7 +52,7 @@ class SearchIntentEvent(BaseEvent):
 class SearchResultsEvent(BaseEvent):
     type: str = "search_results"
     step: int
-    sites: list[Sourse]
+    sites: list[Source]
     facts_found: int
 
 
@@ -69,22 +72,12 @@ class DoneEvent(BaseEvent):
     type: str = "done"
     total_steps: int
     total_sources: int
+    message: str
 
 
 class FinalResponseEvent(BaseEvent):
     type: str = "final_answer_chunk"
     text: str
-
-
-class Sourse(BaseModel):
-    url: str
-
-
-class Fact(BaseModel):
-    text: str
-    url: str
-    step: int
-
 
 class SitesInfo(BaseModel):
     url: str
@@ -96,23 +89,34 @@ class SitesInfoEvent(BaseEvent):
     sources: list[SitesInfo]
 
 
-class AgentState(BaseModel):
-    question: str
-    step_count: int | None
-    max_steps: int = 4
-    facts: Annotated[list[Fact], Field(default_factory=list)]
-    sourses: Annotated[set[Sourse], Field(default_factory=set)]
-    queries: Annotated[set[str], Field(default_factory=set)]
-
-
-class ReflectionDecision(BaseModel):
-    is_sufficient: bool
-    reasoning: str
-    new_search_queries: Annotated[list[str], Field(default_factory=list)]
-
-
-class Source(BaseModel):
+class BaseSource(BaseModel):
     model_config = ConfigDict(frozen=True)
     text: str
     url: str
+
+
+class Source(BaseSource):
     title: str
+
+
+class Fact(BaseSource):
+    text: Annotated[str, Field(description=Prompts.FACT)]
+    url: Annotated[str, Field(description=Prompts.URL)]
+
+
+class Facts(AskSchema):
+    facts: list[Fact]
+
+
+class AgentState(BaseModel):
+    question: str
+    step_count: int = 0
+    max_steps: int = 4
+    facts: Annotated[list[Fact], Field(default_factory=list)]
+    sourses: Annotated[set[Source], Field(default_factory=set)]
+    queries: Annotated[set[str], Field(default_factory=set)]
+
+
+class NeedMoreDataEvent(BaseEvent):
+    reason: str
+    new_queries: list[str]
