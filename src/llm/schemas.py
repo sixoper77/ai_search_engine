@@ -116,3 +116,11 @@ class TavilyGeneralResponse(ResponseSchema):
     query: str
     images: list[str]
     results: list[TavilyResponse]
+
+
+class ReflectionDecision(AskSchema):
+    is_sufficient: bool
+    reasoning: Annotated[str, Field(description=Prompts.REASON)]
+    new_search_queries: Annotated[
+        list[str], Field(default_factory=list, description=Prompts.NEW_QUERIES)
+    ]

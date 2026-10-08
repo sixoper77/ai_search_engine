@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     llama_model: str | None = None
     llama_url: str | None = None
 
+    groq_api_key: str | None = None
+    qwen_model: str | None = None
+
     def get_model_and_key(self) -> tuple[str | None, str]:
         if self.openai_api_key and self.openai_model:
             return (None, self.openai_model)
@@ -32,6 +35,8 @@ class Settings(BaseSettings):
             return (None, self.gemini_model)
         if self.llama_model and self.llama_url:
             return (self.llama_url, self.llama_model)
+        if self.groq_api_key and self.qwen_model:
+            return (None, self.qwen_model)
         raise ValueError(
             "Add model,api key or model url(if your model is local) to .env file"
         )

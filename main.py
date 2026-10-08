@@ -1,7 +1,8 @@
 # This code is dirty and it isn't final yet
 import asyncio
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
 from src.llm.base import llm
 from src.llm.schemas import (
@@ -10,6 +11,7 @@ from src.llm.schemas import (
     TavilySchema,
 )
 from src.matcher.match import match_results
+from src.search.agent_search import agent_search
 from src.search.parser import Parser
 from src.search.providers.searxng import searxng_client
 from src.search.providers.serper import serper_client
@@ -27,7 +29,7 @@ app = FastAPI()
 
 @app.get("/search/searxng")
 async def send_request(q: str):
-    query = await llm.get_query(q, QueriesSchema)
+    query = await llm.get_query(q, schema=QueriesSchema)
     schema = SearxngSearchSchema(
         search_links=query.search_links,
         search_photos=query.search_photos,
@@ -47,7 +49,7 @@ async def send_request(q: str):
 
 @app.get("/search/serper/")
 async def serper_search(q: str):
-    query = await llm.get_query(q, SerperSchema)
+    query = await llm.get_query(q, schema=SerperSchema)
     print(query.search_type)
     schema = SerperSearchSchema(
         queries=query.search_links,
@@ -69,18 +71,18 @@ async def serper_search(q: str):
 
 @app.get("/search/tavily")
 async def tavily_search(q: str):
-    query = await llm.get_query(q, TavilySchema)
+    query = await llm.get_query(q, schema=TavilySchema)
     schema = TavilySearchSchema(query=q, topic=query.topic, max_results=7)
-    responses = await tavily_client.search(schema)
-    texts = Parser.parse_tavily(responses.results)
+    responses, photos = await tavily_client.search(schema)
+    texts = Parser.parse_tavily(responses[0].results)
     bat_text = await batch_text_from_list(texts)
     match_result = await asyncio.to_thread(match_results, q, bat_text)
     async for token in llm.astream(q, match_result):
         print(token, end="", flush=True)
 
 
-@app.get("search/pro/search/")
-async def pro_search(q: str, provider_name: str):
+@app.get("/search/pro/search/")
+async def pro_search(q: str, provider_name: str, request: Request):
     provider = providers.get(provider_name)
     if provider is None:
         raise HTTPException(
@@ -91,8 +93,7 @@ async def pro_search(q: str, provider_name: str):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="The query is empty"
         )
-
-    # query = await llm.get_query(q, provider.schema)
-    # schema = provider.builder(q, query)
-    # texts, photos = await provider.client.search(schema)
-    # process = await provider.process(texts, photos)
+    return StreamingResponse(
+        agent_search(q, provider, request),
+        media_type="text/event-stream",
+    )
