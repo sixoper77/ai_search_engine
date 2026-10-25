@@ -19,6 +19,10 @@ class ResponseSchema(BaseModel):
     results: list[Any]
 
 
+class ChatName(AskSchema):
+    name: Annotated[str, Field(description=Prompts.NAME, max_length=20)]
+
+
 class QueriesSchema(AskSchema):
     search_links: Annotated[list[str], Field(description=Prompts.PROMPT_URL)]
     search_photos: Annotated[str, Field(description=Prompts.PROMPT_PHOTO)]

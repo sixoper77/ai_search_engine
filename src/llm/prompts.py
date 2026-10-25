@@ -61,3 +61,7 @@ REFLECTION = """You are a strict evaluation system for a QA pipeline. Your task 
 3. **No Assumptions:** If the query asks for a specific metric, date, or name, and the facts only hint at it without stating it explicitly, the facts are insufficient.
 """
 QUERIES = """ If 'is_sufficient' is False, generate 1-3 highly targeted search queries to find the strictly missing information. Queries must be optimized for a search engine. Leave empty if 'is_sufficient' is True."""
+
+CHAT_NAME = (
+    """Short chat title (max 20 letters), in the same language as the user's question"""
+)

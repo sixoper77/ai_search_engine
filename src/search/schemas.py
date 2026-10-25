@@ -79,6 +79,7 @@ class FinalResponseEvent(BaseEvent):
     type: str = "final_answer_chunk"
     text: str
 
+
 class SitesInfo(BaseModel):
     url: str
     title: str
@@ -97,6 +98,7 @@ class BaseSource(BaseModel):
 
 class Source(BaseSource):
     title: str
+    step_id: int | None = None
 
 
 class Fact(BaseSource):
@@ -106,6 +108,9 @@ class Fact(BaseSource):
 
 class Facts(AskSchema):
     facts: list[Fact]
+
+
+# class
 
 
 class AgentState(BaseModel):
@@ -120,3 +125,8 @@ class AgentState(BaseModel):
 class NeedMoreDataEvent(BaseEvent):
     reason: str
     new_queries: list[str]
+
+
+class ChatNameEvent(BaseEvent):
+    type: str = "chat_name"
+    name: str

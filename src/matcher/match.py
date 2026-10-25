@@ -16,7 +16,9 @@ reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
 BI_ENCODER_TOP_K = 30
 
 
-def match_results(query: str, corpus: list[Source]) -> list[Source]:
+def match_results(
+    query: str, corpus: list[Source], step_number: int | None = None
+) -> list[Source]:
     if len(corpus) == 0:
         raise ValueError("The text corpus is empty.")
     corpus = list(dict.fromkeys(corpus))
@@ -45,7 +47,9 @@ def match_results(query: str, corpus: list[Source]) -> list[Source]:
         )
     results = sorted(results, key=lambda x: x["cross_score"], reverse=True)
     text_results = [
-        Source(text=res["text"], url=res["url"], title=res["title"])
+        Source(
+            text=res["text"], url=res["url"], title=res["title"], step_id=step_number
+        )
         for res in results[:12]
     ]
     print(text_results)
