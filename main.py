@@ -1,90 +1,112 @@
 # This code is dirty and it isn't final yet
+from __future__ import annotations
+
 import asyncio
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Annotated, Any
+from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import Base, Chat, Role
+from src.db.requests import (
+    async_session,
+    engine,
+    get_db,
+    get_or_create,
+    put_message_in_chat,
+    set_title_if_none,
+)
 from src.llm.base import llm
+from src.llm.enums import Prompts
 from src.llm.schemas import (
-    QueriesSchema,
-    SerperSchema,
-    TavilySchema,
+    AskSchema,
+    ChatName,
 )
 from src.matcher.match import match_results
 from src.search.agent_search import agent_search
-from src.search.parser import Parser
-from src.search.providers.searxng import searxng_client
-from src.search.providers.serper import serper_client
-from src.search.providers.tavily import tavily_client
-from src.search.registry import providers
-from src.search.schemas import (
-    SearxngSearchSchema,
-    SerperSearchSchema,
-    TavilySearchSchema,
-)
-from src.search.utils import batch_text_from_list, get_text, search_html
-
-app = FastAPI()
+from src.search.registry import ProviderConfig, providers
 
 
-@app.get("/search/searxng")
-async def send_request(q: str):
-    query = await llm.get_query(q, schema=QueriesSchema)
-    schema = SearxngSearchSchema(
-        search_links=query.search_links,
-        search_photos=query.search_photos,
-        language=query.language,
-    )
-    links_results, photos_results = await searxng_client.search(schema)
-    print(links_results)
-    print(photos_results)
-    result = await Parser.parse(links_results, photos_results)
-
-    sites = await search_html(result.links)
-    text = await get_text(sites)
-    match_result = await asyncio.to_thread(match_results, q, text)
-    async for token in llm.astream(q, match_result):
-        print(token, end="", flush=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
 
 
-@app.get("/search/serper/")
-async def serper_search(q: str):
-    query = await llm.get_query(q, schema=SerperSchema)
-    print(query.search_type)
-    schema = SerperSearchSchema(
-        queries=query.search_links,
-        photo_query=query.search_photos,
-        type=query.search_type,
-        country=query.country,
-        language=query.lang,
-    )
-    links_results, photos_results = await serper_client.search(schema)
-    result = await Parser.parse(links_results, photos_results)
-    print(result.links)
-    sites = await search_html(result.links)
-    text = await get_text(sites)
-    match_result = await asyncio.to_thread(match_results, q, text)
-    async for token in llm.astream(q, match_result):
-        print(token, end="", flush=True)
-    print(query.search_links)
+async def get_chat(session: SessionDep, chat_id: UUID | None = None):
+    chat, is_new = await get_or_create(session, chat_id)
+    await session.commit()
+    return chat, is_new
 
 
-@app.get("/search/tavily")
-async def tavily_search(q: str):
-    query = await llm.get_query(q, schema=TavilySchema)
-    schema = TavilySearchSchema(query=q, topic=query.topic, max_results=7)
-    responses, photos = await tavily_client.search(schema)
-    texts = Parser.parse_tavily(responses[0].results)
-    bat_text = await batch_text_from_list(texts)
-    match_result = await asyncio.to_thread(match_results, q, bat_text)
-    async for token in llm.astream(q, match_result):
-        print(token, end="", flush=True)
+app = FastAPI(lifespan=lifespan)
+
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
+ChatDep = Annotated[tuple[Chat, bool], Depends(get_chat)]
 
 
-@app.get("/search/pro/search/")
-async def pro_search(q: str, provider_name: str, request: Request):
-    provider = providers.get(provider_name)
-    if provider is None:
+tasks_stor: set[asyncio.Task] = set()
+
+
+async def set_title(chat_id: UUID, q: str) -> None:
+    title = await llm.get_query(q, Prompts.NAME, schema=ChatName)
+    async with async_session() as session:
+        await set_title_if_none(session, chat_id, title.name)
+
+
+async def generate_and_save_title(chat_info: ChatDep, q: str) -> None:
+    chat, is_new = chat_info
+    if not is_new:
+        return
+    task = asyncio.create_task(set_title(chat.id, q))
+    tasks_stor.add(task)
+    task.add_done_callback(tasks_stor.discard)
+
+
+async def default_search[T: AskSchema](
+    q: str,
+    config: ProviderConfig[T],
+    request: Request,
+    session: AsyncSession,
+    chat_id: UUID,
+) -> AsyncGenerator[str, Any]:
+    parts = []
+    query = await llm.get_query(q, schema=config.schema)
+    schema = config.builder(q, query)
+    links_results, photos_results = await config.client.search(schema)
+    process_result = await config.process(links_results, photos_results)
+    match_result = await asyncio.to_thread(match_results, q, process_result)
+    try:
+        async for token in llm.astream(q, match_result):
+            parts.append(token)
+            yield token
+    finally:
+        text = "".join(parts)
+        if text:
+            await put_message_in_chat(session, chat_id, q, Role.USER)
+            await put_message_in_chat(session, chat_id, text, Role.AI, match_result)
+            await session.commit()
+
+
+@app.get("/search/", dependencies=[Depends(generate_and_save_title)])
+async def pro_search(
+    q: str,
+    provider_name: str,
+    pro_search: bool,
+    request: Request,
+    chat_info: ChatDep,
+    session: SessionDep,
+):
+    chat, _ = chat_info
+    chat_id = chat.id
+    config = providers.get(provider_name)
+    if config is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The query was entered incorrectly, or such a provider does not exist.",
@@ -93,7 +115,10 @@ async def pro_search(q: str, provider_name: str, request: Request):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="The query is empty"
         )
+    if await request.is_disconnected():
+        return
+    search_type = agent_search if pro_search else default_search
     return StreamingResponse(
-        agent_search(q, provider, request),
+        search_type(q, config, request, session, chat_id),
         media_type="text/event-stream",
     )
