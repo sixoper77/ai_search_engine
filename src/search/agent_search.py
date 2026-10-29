@@ -1,12 +1,12 @@
 import asyncio
 import traceback
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from uuid import UUID
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Role
+from src.db.models import Message, Role
 from src.db.requests import put_message_in_chat
 from src.llm.base import llm
 from src.llm.enums import Prompts
@@ -26,7 +26,7 @@ from .schemas import (
     Source,
     StepSrtartEvent,
 )
-from .utils import emit
+from .utils import emit, parse_chat_history
 
 MAX_FACTS_COUNT = 40
 
@@ -67,8 +67,7 @@ async def get_facts(state: AgentState, data: list[Source]) -> Facts:
 
 
 async def stream_response(state: AgentState) -> AsyncGenerator[str, None]:
-    query = state.question
-    sources = state.facts
+    query, sources = state.question, state.facts
 
     async for token in llm.astream(query, sources):
         yield token
@@ -80,9 +79,11 @@ async def agent_search[T: AskSchema](
     request: Request,
     session: AsyncSession,
     chat_id: UUID,
+    history: Sequence[Message],
 ) -> AsyncGenerator[str, None]:
-    state = AgentState(question=q)
-    pending_queries = [q]
+    q_with_history = parse_chat_history(q, history) if history else None
+    state = AgentState(question=q_with_history if q_with_history else q)
+    pending_queries = [q_with_history if q_with_history else q]
     parts = []
     try:
         if await request.is_disconnected():

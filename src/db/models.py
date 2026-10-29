@@ -1,8 +1,9 @@
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 intpk = Annotated[int, mapped_column(primary_key=True)]
@@ -27,6 +28,11 @@ class Chat(Base):
         order_by="Message.id",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
+        onupdate=func.now(),
+        index=True,
     )
 
 
