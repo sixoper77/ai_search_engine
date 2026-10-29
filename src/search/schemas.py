@@ -100,6 +100,12 @@ class Source(BaseSource):
     title: str
     step_id: int | None = None
 
+    def __hash__(self):
+        return hash(self.url)
+
+    def __eq__(self, value):
+        return isinstance(value, Source) and self.url == value.url
+
 
 class Fact(BaseSource):
     text: Annotated[str, Field(description=Prompts.FACT)]
