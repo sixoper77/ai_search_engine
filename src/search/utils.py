@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Iterator, Sequence
 
+from src.db.models import Message, Role
 from src.llm.schemas import (
     QueriesSchema,
     ResponseSchema,
@@ -158,3 +159,14 @@ async def process_tavily(
     for c in all_chunks:
         seen.setdefault(c.text, c)
     return list(seen.values())
+
+
+def parse_chat_history(q: str, history: Sequence[Message]) -> str:
+    queris = [h.content for h in history if h.role == Role.USER]
+    ai = [h.content for h in history if h.role == Role.AI]
+    gather_history = "\n".join(
+        f"User questions: {query}\nAI answer : {answer}\n"
+        for query, answer in zip(queris, ai)
+    )
+    text_to_ai = f"\nCurrent question:{q}\nHistory of the chat: {gather_history}"
+    return text_to_ai
