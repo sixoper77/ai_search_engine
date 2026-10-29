@@ -13,6 +13,7 @@ dependencies = [
     "instructor>=1.15.4",
     "litellm>=1.97.0",
     "python-dotenv>=1.2.2",
+    "ruff>=0.17.3",
     "sentence-transformers>=6.0.0",
     "sqlalchemy>=2.0.51",
     "tavily-python>=0.8.0",
@@ -29,3 +30,7 @@ name = "pytorch"
 url = "https://download.pytorch.org/whl/cu132"
 explicit = true
 
+[tool.ruff.lint]
+ignore = [
+    "BLE001",
+]
