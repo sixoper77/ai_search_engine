@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -11,15 +12,18 @@ from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Base, Chat, Role
+from src.db.models import Base, Chat, Message, Role
 from src.db.requests import (
     async_session,
     engine,
+    get_chat_history,
+    get_chat_list,
     get_db,
     get_or_create,
     put_message_in_chat,
     set_title_if_none,
 )
+from src.db.schemas import ChatItem, MessageOut
 from src.llm.base import llm
 from src.llm.enums import Prompts
 from src.llm.schemas import (
@@ -29,6 +33,7 @@ from src.llm.schemas import (
 from src.matcher.match import match_results
 from src.search.agent_search import agent_search
 from src.search.registry import ProviderConfig, providers
+from src.search.utils import parse_chat_history
 
 
 @asynccontextmanager
@@ -75,15 +80,23 @@ async def default_search[T: AskSchema](
     request: Request,
     session: AsyncSession,
     chat_id: UUID,
+    history: Sequence[Message],
 ) -> AsyncGenerator[str, Any]:
+    if await request.is_disconnected():
+        return
     parts = []
-    query = await llm.get_query(q, schema=config.schema)
+    if history:
+        question = parse_chat_history(q, history)
+        query = await llm.get_query(question, schema=config.schema)
+    else:
+        query = await llm.get_query(q, schema=config.schema)
+    print(question)
     schema = config.builder(q, query)
     links_results, photos_results = await config.client.search(schema)
     process_result = await config.process(links_results, photos_results)
     match_result = await asyncio.to_thread(match_results, q, process_result)
     try:
-        async for token in llm.astream(q, match_result):
+        async for token in llm.astream(question, match_result):
             parts.append(token)
             yield token
     finally:
@@ -105,6 +118,7 @@ async def pro_search(
 ):
     chat, _ = chat_info
     chat_id = chat.id
+    history = await get_chat_history(session, chat_id)
     config = providers.get(provider_name)
     if config is None:
         raise HTTPException(
@@ -119,6 +133,21 @@ async def pro_search(
         return
     search_type = agent_search if pro_search else default_search
     return StreamingResponse(
-        search_type(q, config, request, session, chat_id),
+        search_type(q, config, request, session, chat_id, history),
         media_type="text/event-stream",
     )
+
+
+@app.get("/chats/", response_model=list[ChatItem])
+async def chat_list(
+    session: SessionDep,
+    before_updated_at: datetime | None = None,
+    before_id: UUID | None = None,
+):
+    cursor = (before_updated_at, before_id) if before_id and before_updated_at else None
+    return await get_chat_list(session, cursor)
+
+
+@app.get("/chat/{id}", response_model=list[MessageOut])
+async def load_chat_history(id: UUID, session: SessionDep):
+    return await get_chat_history(session, id)
