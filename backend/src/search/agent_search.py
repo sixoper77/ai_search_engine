@@ -17,14 +17,18 @@ from src.search.schemas import Facts
 
 from .schemas import (
     AgentState,
+    ChatIdEvent,
     DoneEvent,
     ErrorEvent,
     InfoEvent,
     NeedMoreDataEvent,
+    PhotoEvent,
+    SearchResult,
     SitesInfo,
     SitesInfoEvent,
     Source,
     StepSrtartEvent,
+    TokenEvent,
 )
 from .utils import emit, parse_chat_history
 
@@ -33,7 +37,7 @@ MAX_FACTS_COUNT = 40
 
 async def search_data[T: AskSchema](
     q: str, config: ProviderConfig[T], step_number: int
-) -> list[Source]:
+) -> SearchResult:
     query = await llm.get_query(q, schema=config.schema)
     schema = config.builder(q, query)
     links_results, photos_results = await config.client.search(schema)
@@ -41,7 +45,8 @@ async def search_data[T: AskSchema](
     match_result = await asyncio.to_thread(
         match_results, q, process_result, step_number
     )
-    return match_result
+    print(type(photos_results), photos_results)
+    return SearchResult(sources=match_result, photos=photos_results)
 
 
 async def reflection_decision(state: AgentState) -> ReflectionDecision:
@@ -88,6 +93,7 @@ async def agent_search[T: AskSchema](
     try:
         if await request.is_disconnected():
             return
+        yield emit(ChatIdEvent(chat_id=str(chat_id)))
         while state.step_count < state.max_steps:
             if await request.is_disconnected():
                 return
@@ -106,7 +112,12 @@ async def agent_search[T: AskSchema](
                         tg.create_task(search_data(qs, config, state.step_count))
                         for qs in pending_queries
                     ]
-                queries = [s for task in tasks for s in task.result()]
+                sources = [task.result() for task in tasks]
+                queries = [s for sr in sources for s in sr.sources]
+                photos = [p for ph in sources for p in ph.photos]
+                for p in photos:
+                    if p not in state.images and len(state.images) < 4:
+                        state.images.append(p)
                 print(queries)
             except Exception as e:
                 traceback.print_exception(e)
@@ -149,10 +160,13 @@ async def agent_search[T: AskSchema](
                         new_queries=decision.new_search_queries,
                     )
                 )
+
         try:
+            yield emit(PhotoEvent(photos=state.images[:4]))
             async for chunk in stream_response(state):
                 parts.append(chunk)
-                yield chunk
+                yield emit(TokenEvent(token=chunk))
+                await asyncio.sleep(0)
         finally:
             text = "".join(parts)
             if text:

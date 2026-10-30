@@ -9,8 +9,15 @@ wheels/
 # Virtual environments
 .venv
 
-.env 
+.env
+backend/.env
 
+# SQLite
 app.db
+backend/app.db
 
-srccc.py
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.vite/

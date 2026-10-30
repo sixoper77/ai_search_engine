@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BACKEND_DIR = Path(__file__).resolve().parent
+ENV_PATH = BACKEND_DIR / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_PATH) if ENV_PATH.exists() else ".env",
+        extra="ignore",
+    )
+    database_url: str = f"sqlite+aiosqlite:///{BACKEND_DIR / 'app.db'}"
 
     tavily_api_key: str | None = None
     bing_api_key: str | None = None
@@ -28,6 +35,13 @@ class Settings(BaseSettings):
 
     groq_api_key: str | None = None
     qwen_model: str | None = None
+
+    @property
+    def resolved_database_url(self) -> str:
+        if self.database_url.startswith("sqlite+aiosqlite:///./"):
+            rel_path = self.database_url.replace("sqlite+aiosqlite:///./", "")
+            return f"sqlite+aiosqlite:///{BACKEND_DIR / rel_path}"
+        return self.database_url
 
     def get_model_and_key(self) -> tuple[str | None, str]:
         if self.openai_api_key and self.openai_model:

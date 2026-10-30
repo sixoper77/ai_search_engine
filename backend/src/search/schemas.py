@@ -116,9 +116,6 @@ class Facts(AskSchema):
     facts: list[Fact]
 
 
-# class
-
-
 class AgentState(BaseModel):
     question: str
     step_count: int = 0
@@ -126,9 +123,11 @@ class AgentState(BaseModel):
     facts: Annotated[list[Fact], Field(default_factory=list)]
     sourses: Annotated[set[Source], Field(default_factory=set)]
     queries: Annotated[set[str], Field(default_factory=set)]
+    images: Annotated[list[str], Field(default_factory=list, max_length=4)]
 
 
 class NeedMoreDataEvent(BaseEvent):
+    type: str = "need_more_data"
     reason: str
     new_queries: list[str]
 
@@ -136,3 +135,23 @@ class NeedMoreDataEvent(BaseEvent):
 class ChatNameEvent(BaseEvent):
     type: str = "chat_name"
     name: str
+
+
+class ChatIdEvent(BaseEvent):
+    type: str = "chat_id"
+    chat_id: str
+
+
+class PhotoEvent(BaseEvent):
+    type: str = "photos"
+    photos: list[str]
+
+
+class TokenEvent(BaseEvent):
+    type: str = "token"
+    token: str
+
+
+class SearchResult(BaseModel):
+    sources: list[Source]
+    photos: list[str]

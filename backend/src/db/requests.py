@@ -13,7 +13,7 @@ from src.search.schemas import Source
 
 from .models import Chat, Message, Role, StepSource
 
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+engine = create_async_engine(settings.resolved_database_url, pool_pre_ping=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
